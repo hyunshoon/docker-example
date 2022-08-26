@@ -1,0 +1,32 @@
+version: '3.7'
+services:
+  wordpress:
+    image: wordpress
+    deploy:
+      replicas: 3
+      placement:
+        constraints: [node.labels.zone == seoul]
+      restart_policy:
+        condition: on-failure
+        max_attempts: 2
+    environment:
+      SERVICE_PORTS: 80
+    networks:
+      - myovlnet
+  proxy:
+    image: dockercloud/haproxy
+    depends_on:
+      - wordpress
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports: # -p option, attached to ingress network
+      - "8001:80"
+    networks: # backend network -> wordpress containers
+      - myovlnet
+    deploy:
+      mode: global
+      placement:
+        constraints: [node.role==manager]
+networks:
+  myovlnet:
+    external: true
